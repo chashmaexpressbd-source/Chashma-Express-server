@@ -6,8 +6,13 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// MongoDB Connection
+// ---------- Middleware ----------
+app.use(cors());
+app.use(express.json());
+
+// ---------- MongoDB Setup ----------
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.hyxzws2.mongodb.net/?appName=Cluster0`;
+
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -16,32 +21,30 @@ const client = new MongoClient(uri, {
   },
 });
 
-const db = client.db('ChashmaExpressBD');
-const productCollection = db.collection('products');
-const ordersCollection = db.collection('orders');
-const usersCollection = db.collection('users');
+// 🔥 Vercel-friendly cached connection
+let cachedDb = null;
 
-// Connect to MongoDB once
-client
-  .connect()
-  .then(() => {
-    console.log('✅ MongoDB connected successfully');
-  })
-  .catch(err => {
-    console.error('❌ MongoDB connection failed:', err);
-  });
+async function connectDB() {
+  if (cachedDb) {
+    return cachedDb;
+  }
 
-// Root route
+  await client.connect();
+  console.log('✅ MongoDB connected');
+
+  const db = client.db('ChashmaExpressBD');
+  cachedDb = db;
+  return db;
+}
+
+// ---------- Root Route ----------
 app.get('/', (req, res) => {
   res.send('🚀 Chashma Express BD Server is running fine!');
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// ---------- Product Routes ----------
 
-// -------------------- Routes --------------------
-
+// Dummy product test route
 app.get('/products', (req, res) => {
   res.json({
     _id: '697600d90d3b6c54a84bd4d9',
@@ -50,36 +53,33 @@ app.get('/products', (req, res) => {
     price: '692',
     discountPrice: '2',
     stock: '96',
-    description: 'Quasi placeat ut do',
     brand: 'Nike',
-    sku: 'Eos ipsum ullam qui',
-    warranty: 'Explicabo Quibusdam',
-    frameMaterial: 'Monel',
-    lensType: 'Gradient',
-    lensColor: 'Green',
-    frameColor: 'Officia in deserunt ',
-    gender: 'Unisex',
-    freeDelivery: false,
-    specifications: ['Ut est consequatur '],
     images: ['https://i.ibb.co/1fTjX88w/end-game.jpg'],
-    createdAt: '2026-01-25T11:39:05.036Z',
   });
 });
 
-// Save a product
+// Save product
 app.post('/products', async (req, res) => {
   try {
+    const db = await connectDB();
+    const productCollection = db.collection('products');
+
     const productData = req.body;
+    productData.createdAt = new Date();
+
     const result = await productCollection.insertOne(productData);
-    res.status(201).json({ message: 'Product saved successfully!', result });
+    res.status(201).json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Get all products with optional search
+// Get all products (search supported)
 app.get('/get-products', async (req, res) => {
   try {
+    const db = await connectDB();
+    const productCollection = db.collection('products');
+
     const search = req.query.search;
     let query = {};
 
@@ -89,162 +89,157 @@ app.get('/get-products', async (req, res) => {
 
     const result = await productCollection
       .find(query)
-      .sort({ createdAt: -1 }) // 👈 latest product first
+      .sort({ createdAt: -1 })
       .toArray();
 
-    res.send(result);
+    res.json(result);
   } catch (error) {
-    console.error('Error in /get-products:', error);
-    res.status(500).json({ error: 'Server error', details: error.message });
+    res.status(500).json({
+      error: 'Server error',
+      details: error.message,
+    });
   }
 });
 
 // Get single product
 app.get('/single-products/:id', async (req, res) => {
   try {
-    const id = req.params.id.trim();
-    if (!ObjectId.isValid(id))
-      return res.status(400).json({ error: 'Invalid product ID' });
+    const db = await connectDB();
+    const productCollection = db.collection('products');
+
+    const id = req.params.id;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ID' });
+    }
 
     const product = await productCollection.findOne({
       _id: new ObjectId(id),
     });
-    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
 
     res.json(product);
-  } catch (error) {
-    console.error('Error in /single-products:', error);
-    res.status(500).json({ error: 'Server error', details: error.message });
-  }
-});
-
-// Delete a product
-app.delete('/products/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const result = await productCollection.deleteOne({
-      _id: new ObjectId(id),
-    });
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ message: 'Delete failed', error });
-  }
-});
-
-// Save order
-app.post('/orders', async (req, res) => {
-  try {
-    const order = req.body;
-    order.createdAt = new Date();
-    const result = await ordersCollection.insertOne(order);
-    res
-      .status(201)
-      .json({ message: 'Order saved successfully', id: result.insertedId });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Get orders
+// Delete product
+app.delete('/products/:id', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const productCollection = db.collection('products');
+
+    const id = req.params.id;
+
+    const result = await productCollection.deleteOne({
+      _id: new ObjectId(id),
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ---------- Order Routes ----------
+
+// Save order
+app.post('/orders', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const ordersCollection = db.collection('orders');
+
+    const order = req.body;
+    order.createdAt = new Date();
+
+    const result = await ordersCollection.insertOne(order);
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all orders
 app.get('/get-orders', async (req, res) => {
   try {
+    const db = await connectDB();
+    const ordersCollection = db.collection('orders');
+
     const result = await ordersCollection
       .find()
-      .sort({ createdAt: -1 }) // 👈 latest orders first
+      .sort({ createdAt: -1 })
       .toArray();
 
     res.json(result);
   } catch (error) {
-    console.error('Error in /single-products:', error);
-    res.status(500).json({ error: 'Server error', details: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
 // Update order status
 app.patch('/update-order/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const ordersCollection = db.collection('orders');
+
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!ObjectId.isValid(id))
-      return res.status(400).json({ error: 'Invalid order ID' });
-
     const result = await ordersCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: { status } }
+      { $set: { status } },
     );
 
     res.json(result);
   } catch (error) {
-    console.error('Error in /single-products:', error);
-    res.status(500).json({ error: 'Server error', details: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Admin login (from DB)
+// ---------- Admin Login ----------
 app.post('/admin-login', async (req, res) => {
   try {
+    const db = await connectDB();
+    const usersCollection = db.collection('users');
+
     const { email, password } = req.body;
 
-    // check if admin email and password match from .env
+    // ENV admin check
     if (
       email === process.env.ADMIN_EMAIL &&
       password === process.env.ADMIN_PASSWORD
     ) {
       return res.json({
         success: true,
-        message: 'Admin login successful',
-        user: {
-          email: process.env.ADMIN_EMAIL,
-          role: 'admin',
-        },
+        role: 'admin',
+        email,
       });
     }
 
-    // 1. User খুঁজুন
     const user = await usersCollection.findOne({ email });
 
-    if (!user) {
-      return res
-        .status(401)
-        .json({ success: false, message: 'User not found' });
+    if (!user || user.password !== password || user.role !== 'admin') {
+      return res.status(401).json({ success: false });
     }
 
-    // 2. Password match check করুন (এখন simple match, পরে bcrypt করব)
-    if (user.password !== password) {
-      return res
-        .status(401)
-        .json({ success: false, message: 'Invalid password' });
-    }
-
-    // 3. Role check করুন
-    if (user.role !== 'admin') {
-      return res
-        .status(403)
-        .json({ success: false, message: 'Not authorized' });
-    }
-
-    // 4. Success হলে response পাঠান
     res.json({
       success: true,
-      message: 'Admin login successful',
       user: {
         id: user._id,
-        name: user.name,
         email: user.email,
         role: user.role,
       },
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message,
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Start server
+// ---------- Start Server ----------
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
