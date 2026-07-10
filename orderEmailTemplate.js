@@ -40,7 +40,17 @@ const orderEmailTemplate = order => `
           </tr>
           <tr>
             <td style="padding:10px 0;border-bottom:1px solid #eaeaea;font-size:14px;color:#555;">Date</td>
-            <td style="padding:10px 0;border-bottom:1px solid #eaeaea;font-size:14px;color:#333;">${new Date(order.createdAt).toLocaleString('en-BD', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+            <td style="padding:10px 0;border-bottom:1px solid #eaeaea;font-size:14px;color:#333;">$${new Date(
+              order.createdAt,
+            ).toLocaleString('en-BD', {
+              timeZone: 'Asia/Dhaka',
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            })}</td>
           </tr>
         </table>
         
