@@ -182,7 +182,7 @@ app.post('/orders', async (req, res) => {
 
     const result = await ordersCollection.insertOne(order);
 
-    order._id = result.insertedId;
+    order._id = result.insertedId.toString();
 
     // Send email
     await transporter.sendMail({

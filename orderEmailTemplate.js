@@ -18,7 +18,7 @@ const orderEmailTemplate = order => `
         
         <div style="font-size:48px;margin-bottom:8px;">🛒</div>
         <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;letter-spacing:-0.5px;">New Order Received</h1>
-        <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:15px;">Order #${order._id?.slice(-6) || 'NEW'}</p>
+        <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:15px;">Order #${order._id ? order._id.toString().slice(-6) : 'NEW'}</p>
       </div>
       
       <!-- Order Summary Badge -->
