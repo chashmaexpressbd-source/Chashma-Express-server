@@ -159,6 +159,16 @@ app.delete('/products/:id', async (req, res) => {
 
 // ---------- Order Routes ----------
 
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
 // Save order
 app.post('/orders', async (req, res) => {
   try {
@@ -169,6 +179,78 @@ app.post('/orders', async (req, res) => {
     order.createdAt = new Date();
 
     const result = await ordersCollection.insertOne(order);
+
+    // Send email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: 'chashmaexpressbd@gmail.com',
+      subject: '🛒 New Order Received',
+      html: `
+  <div style="margin:0;padding:30px;background:#f3f4f6;font-family:Arial,sans-serif;">
+    <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+
+      <!-- Header -->
+      <div style="background:#dc2626;padding:20px;text-align:center;">
+        <h1 style="color:#ffffff;margin:0;font-size:26px;">
+          🛒 New Order Received
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding:30px;">
+
+        <p style="font-size:16px;color:#374151;margin-bottom:20px;">
+          A new customer has placed an order.
+        </p>
+
+        <div style="background:#f9fafb;padding:20px;border-radius:10px;border-left:5px solid #dc2626;">
+
+          <table style="width:100%;border-collapse:collapse;font-size:15px;">
+
+            <tr>
+              <td style="padding:10px 0;font-weight:bold;color:#111827;">
+                👤 Customer
+              </td>
+              <td style="padding:10px 0;color:#4b5563;">
+                ${order.name}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:10px 0;font-weight:bold;color:#111827;">
+                📞 Phone
+              </td>
+              <td style="padding:10px 0;color:#4b5563;">
+                ${order.phone}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:10px 0;font-weight:bold;color:#111827;">
+                📍 Address
+              </td>
+              <td style="padding:10px 0;color:#4b5563;">
+                ${order.address}
+              </td>
+            </tr>
+
+          </table>
+
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="background:#f9fafb;padding:18px;text-align:center;border-top:1px solid #e5e7eb;">
+        <p style="margin:0;font-size:13px;color:#6b7280;">
+          This email was automatically generated from your website.
+        </p>
+      </div>
+
+    </div>
+  </div>
+  `,
+    });
     res.status(201).json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
