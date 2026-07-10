@@ -2,6 +2,7 @@ const express = require('express');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 require('dotenv').config();
+const orderEmailTemplate = require('./orderEmailTemplate');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -160,6 +161,7 @@ app.delete('/products/:id', async (req, res) => {
 // ---------- Order Routes ----------
 
 const nodemailer = require('nodemailer');
+const orderEmailTemplate = require('./orderEmailTemplate');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -186,101 +188,7 @@ app.post('/orders', async (req, res) => {
       from: process.env.EMAIL_USER,
       to: 'chashmaexpressbd@gmail.com',
       subject: '🛒 New Order Received',
-      html: `
-  <div style="background:#f3f4f6;padding:30px;font-family:Arial,sans-serif;">
-    <div style="max-width:650px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
-
-      <!-- Header -->
-      <div style="background:#dc2626;padding:20px;text-align:center;">
-        <h2 style="margin:0;color:#fff;">🛒 New Order Received</h2>
-      </div>
-
-      <!-- Body -->
-      <div style="padding:25px;">
-
-        <table style="width:100%;border-collapse:collapse;">
-          
-          <tr>
-            <td colspan="2" style="padding-bottom:15px;text-align:center;">
-              <img src="${order.productImage}" alt="${order.productName}"
-                style="max-width:180px;border-radius:10px;border:1px solid #ddd;">
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">📦 Product</td>
-            <td style="padding:10px;">${order.productName}</td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">💰 Price</td>
-            <td style="padding:10px;color:#dc2626;font-weight:bold;">
-              ৳${order.price}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">🔢 Quantity</td>
-            <td style="padding:10px;">${order.quantity}</td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">💵 Total</td>
-            <td style="padding:10px;color:#dc2626;font-size:18px;font-weight:bold;">
-              ৳${order.price * order.quantity}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">👤 Customer</td>
-            <td style="padding:10px;">${order.userName}</td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">📞 Phone</td>
-            <td style="padding:10px;">${order.userPhone}</td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">📍 Address</td>
-            <td style="padding:10px;">${order.userAddress}</td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">📌 Status</td>
-            <td style="padding:10px;">
-              <span style="background:#fef3c7;color:#92400e;padding:5px 12px;border-radius:20px;font-weight:bold;">
-                ${order.status.toUpperCase()}
-              </span>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">🕒 Order Time</td>
-            <td style="padding:10px;">
-              ${new Date(order.createdAt).toLocaleString('en-BD')}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:10px;font-weight:bold;background:#f9fafb;">🆔 Product ID</td>
-            <td style="padding:10px;">${order.productId}</td>
-          </tr>
-
-        </table>
-
-      </div>
-
-      <!-- Footer -->
-      <div style="background:#f9fafb;padding:18px;text-align:center;border-top:1px solid #e5e7eb;">
-        <p style="margin:0;color:#6b7280;font-size:13px;">
-          Chashma Express BD • Automatic Order Notification
-        </p>
-      </div>
-
-    </div>
-  </div>
-  `,
+      html: orderEmailTemplate(order),
     });
     res.status(201).json(result);
   } catch (error) {
