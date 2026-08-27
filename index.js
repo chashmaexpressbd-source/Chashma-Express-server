@@ -12,6 +12,8 @@ app.use(
   cors({
     origin: [
       'https://chashma-express-client.vercel.app',
+      "https://www.chashmaexpressbd.com",
+      "https://chashmaexpressbd.com",
       'http://localhost:5173',
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
