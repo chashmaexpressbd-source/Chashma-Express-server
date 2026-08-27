@@ -10,12 +10,12 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(
   cors({
-    // origin: [
-    //   'https://chashma-express-client.vercel.app',
-    //   "https://www.chashmaexpressbd.com",
-    //   "https://chashmaexpressbd.com",
-    //   'http://localhost:5173',
-    // ],
+    origin: [
+      'https://chashma-express-client.vercel.app',
+      'https://www.chashmaexpressbd.com',
+      'https://chashmaexpressbd.com',
+      'http://localhost:5173',
+    ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -88,32 +88,34 @@ app.post('/products', async (req, res) => {
   }
 });
 
+// for test comment
+
 // Get all products (search supported)
-app.get('/get-products', async (req, res) => {
-  try {
-    const db = await connectDB();
-    const productCollection = db.collection('products');
+// app.get('/get-products', async (req, res) => {
+//   try {
+//     const db = await connectDB();
+//     const productCollection = db.collection('products');
 
-    const search = req.query.search;
-    let query = {};
+//     const search = req.query.search;
+//     let query = {};
 
-    if (search) {
-      query = { name: { $regex: search, $options: 'i' } };
-    }
+//     if (search) {
+//       query = { name: { $regex: search, $options: 'i' } };
+//     }
 
-    const result = await productCollection
-      .find(query)
-      .sort({ createdAt: -1 })
-      .toArray();
+//     const result = await productCollection
+//       .find(query)
+//       .sort({ createdAt: -1 })
+//       .toArray();
 
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      error: 'Server error',
-      details: error.message,
-    });
-  }
-});
+//     res.json(result);
+//   } catch (error) {
+//     res.status(500).json({
+//       error: 'Server error',
+//       details: error.message,
+//     });
+//   }
+// });
 
 // Get single product
 app.get('/single-products/:id', async (req, res) => {
